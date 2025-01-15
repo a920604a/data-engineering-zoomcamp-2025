@@ -66,7 +66,7 @@ volumes:
 - localhost:5432
 - db:5433
 - postgres:5432
-- db:5432
+- db:5432 V
 
 
 ##  Prepare Postgres
