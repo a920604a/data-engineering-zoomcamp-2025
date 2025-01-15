@@ -9,6 +9,5 @@ pip --version
 2. `db:5432`
 3. `104,838; 199,013; 109,645; 27,688; 35,202`
 4. `2019-10-31`
-
-
-
+5. `East Harlem North, East Harlem South, Morningside Heights`
+6. `JFK Airport`
