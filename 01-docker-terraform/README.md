@@ -11,3 +11,4 @@ pip --version
 4. `2019-10-31`
 5. `East Harlem North, East Harlem South, Morningside Heights`
 6. `JFK Airport`
+7. `terraform init, terraform apply -auto-approve, terraform destroy`
