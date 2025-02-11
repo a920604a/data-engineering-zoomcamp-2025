@@ -4,28 +4,42 @@ OPTIONS (
   uris = ['gs://dtc-data-lake-tim/yellow_tripdata_2024-*.parquet']
 );
 
+CREATE TABLE `keen-dolphin-450409-m8.nytaxi.yellow_taxi_data`
+AS
+SELECT *
+FROM `keen-dolphin-450409-m8.nytaxi.external_yellow_taxi`;
 
 
-SELECT count(*) FROM `keen-dolphin-450409-m8.nytaxi.fhv_tripdata`;
+CREATE MATERIALIZED VIEW `keen-dolphin-450409-m8.nytaxi.materialized_yellow_taxi_data`
+AS
+SELECT *
+FROM `keen-dolphin-450409-m8.nytaxi.yellow_taxi_data`;
 
 
-SELECT COUNT(DISTINCT(dispatching_base_num)) FROM `keen-dolphin-450409-m8.nytaxi.fhv_tripdata`;
+SELECT count(*) FROM `keen-dolphin-450409-m8.nytaxi.external_yellow_taxi`;
 
 
-CREATE OR REPLACE TABLE `keen-dolphin-450409-m8.nytaxi.fhv_nonpartitioned_tripdata`
-AS SELECT * FROM `keen-dolphin-450409-m8.nytaxi.fhv_tripdata`;
+SELECT COUNT(DISTINCT PULocationID) FROM keen-dolphin-450409-m8.nytaxi.external_yellow_taxi;
 
-CREATE OR REPLACE TABLE `keen-dolphin-450409-m8.nytaxi.fhv_partitioned_tripdata`
-PARTITION BY DATE(dropoff_datetime)
-CLUSTER BY dispatching_base_num AS (
-  SELECT * FROM `keen-dolphin-450409-m8.nytaxi.fhv_tripdata`
-);
+SELECT COUNT(DISTINCT PULocationID) FROM keen-dolphin-450409-m8.nytaxi.materialized_yellow_taxi_data;
 
-SELECT count(*) FROM  `keen-dolphin-450409-m8.nytaxi.fhv_nonpartitioned_tripdata`
-WHERE DATE(dropoff_datetime) BETWEEN '2019-01-01' AND '2019-03-31'
-  AND dispatching_base_num IN ('B00987', 'B02279', 'B02060');
+SELECT COUNT(*) FROM keen-dolphin-450409-m8.nytaxi.yellow_taxi_data WHERE fare_amount = 0;
 
 
-SELECT count(*) FROM `keen-dolphin-450409-m8.nytaxi.fhv_partitioned_tripdata`
-WHERE DATE(dropoff_datetime) BETWEEN '2019-01-01' AND '2019-03-31'
-  AND dispatching_base_num IN ('B00987', 'B02279', 'B02060');
+
+CREATE OR REPLACE TABLE `keen-dolphin-450409-m8.nytaxi.partition_yellow_taxi_data`
+PARTITION BY DATE(tpep_dropoff_datetime )  -- 按日期分區 
+AS SELECT *
+FROM `keen-dolphin-450409-m8.nytaxi.yellow_taxi_data`;
+
+SELECT DISTINCT VendorID
+FROM `keen-dolphin-450409-m8.nytaxi.partition_yellow_taxi_data`
+WHERE tpep_dropoff_datetime BETWEEN '2024-03-01' AND '2024-03-15';
+
+SELECT DISTINCT VendorID
+FROM `keen-dolphin-450409-m8.nytaxi.yellow_taxi_data`
+WHERE tpep_dropoff_datetime BETWEEN '2024-03-01' AND '2024-03-15';
+
+
+SELECT COUNT(*) 
+FROM `keen-dolphin-450409-m8.nytaxi.materialized_yellow_taxi_data`;
