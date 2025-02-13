@@ -1,5 +1,5 @@
 Creating an External Table in BigQuery using Yellow Taxi Trip Records
-```
+```sql
 CREATE EXTERNAL TABLE `keen-dolphin-450409-m8.nytaxi.external_yellow_taxi`
 OPTIONS (
   format = 'CSV',  -- Replace with 'PARQUET' or 'JSON' if your data is in those formats
@@ -11,7 +11,7 @@ FROM `keen-dolphin-450409-m8.nytaxi.external_yellow_taxi`;
 ``` 
 
 Creating a Regular Table in BigQuery using Yellow Taxi Trip Records
-```
+```sql
 CREATE TABLE `keen-dolphin-450409-m8.nytaxi.yellow_taxi_data`
 AS
 SELECT *
@@ -19,7 +19,7 @@ FROM `keen-dolphin-450409-m8.nytaxi.external_yellow_taxi`;
 ```
 
 Creating a Materialized Table in BigQuery using Yellow Taxi Trip Records
-```
+```sql
 CREATE MATERIALIZED VIEW `keen-dolphin-450409-m8.nytaxi.materialized_yellow_taxi_data`
 AS
 SELECT *
