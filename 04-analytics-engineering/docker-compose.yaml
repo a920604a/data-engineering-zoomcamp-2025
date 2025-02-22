@@ -1,0 +1,12 @@
+version: '3'
+services:
+  dbt-bq-dtc:
+    build:
+      context: .
+      target: dbt-bigquery
+    image: dbt/bigquery
+    volumes:
+      - .:/usr/app
+      - ~/.dbt/:/root/.dbt/
+      - ~/.gcp:/.google/credentials
+    network_mode: host
