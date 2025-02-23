@@ -36,7 +36,7 @@ ALTER TABLE `keen-dolphin-450409-m8.trips_data_all.yellow_tripdata`
 ALTER TABLE `keen-dolphin-450409-m8.trips_data_all.green_tripdata`
   RENAME COLUMN vendor_id TO VendorID;
 ALTER TABLE `keen-dolphin-450409-m8.trips_data_all.green_tripdata`
-  RENAME COLUMN pickup_datetime TO pickup_datetime;
+  RENAME COLUMN pickup_datetime TO lpep_pickup_datetime;
 ALTER TABLE `keen-dolphin-450409-m8.trips_data_all.green_tripdata`
   RENAME COLUMN dropoff_datetime TO lpep_dropoff_datetime;
 ALTER TABLE `keen-dolphin-450409-m8.trips_data_all.green_tripdata`

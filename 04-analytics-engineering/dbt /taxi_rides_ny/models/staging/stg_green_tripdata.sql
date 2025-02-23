@@ -7,20 +7,20 @@
 with tripdata as 
 (
   select *,
-    row_number() over(partition by vendor_id, pickup_datetime) as rn
+    row_number() over(partition by vendorid, lpep_pickup_datetime) as rn
   from {{ source('staging','green_tripdata') }}
-  where vendor_id is not null 
+  where vendorid is not null 
 )
 select
     -- identifiers
-    {{ dbt_utils.generate_surrogate_key(['vendor_id', 'pickup_datetime']) }} as tripid,
-    {{ dbt.safe_cast("vendor_id", api.Column.translate_type("integer")) }} as vendor_id,
-    {{ dbt.safe_cast("rate_code", api.Column.translate_type("integer")) }} as ratecodeid,
+    {{ dbt_utils.generate_surrogate_key(['vendorid', 'lpep_pickup_datetime']) }} as tripid,
+    {{ dbt.safe_cast("vendorid", api.Column.translate_type("integer")) }} as vendorid,
+    {{ dbt.safe_cast("ratecodeid", api.Column.translate_type("integer")) }} as ratecodeid,
     {{ dbt.safe_cast("pulocationid", api.Column.translate_type("integer")) }} as pickup_locationid,
     {{ dbt.safe_cast("dolocationid", api.Column.translate_type("integer")) }} as dropoff_locationid,
     
     -- timestamps
-    cast(pickup_datetime as timestamp) as pickup_datetime,
+    cast(lpep_pickup_datetime as timestamp) as pickup_datetime,
     cast(lpep_dropoff_datetime as timestamp) as dropoff_datetime,
     
     -- trip info

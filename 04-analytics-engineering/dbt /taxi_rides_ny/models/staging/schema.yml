@@ -23,7 +23,7 @@ models:
       technology service providers.
     columns:
       - name: tripid
-        description: Primary key for this table, generated with a concatenation of vendor_id+pickup_datetime
+        description: Primary key for this table, generated with a concatenation of vendorid+pickup_datetime
         tests:
           - unique:
               severity: warn
@@ -114,7 +114,7 @@ models:
       technology service providers.
     columns:
       - name: tripid
-        description: Primary key for this table, generated with a concatenation of vendor_id+pickup_datetime
+        description: Primary key for this table, generated with a concatenation of vendorid+pickup_datetime
         tests:
           - unique:
               severity: warn
