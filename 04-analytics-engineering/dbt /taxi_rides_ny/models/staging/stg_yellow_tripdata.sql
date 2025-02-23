@@ -3,14 +3,14 @@
 with tripdata as 
 (
   select *,
-    row_number() over(partition by vendorid, tpep_pickup_datetime) as rn
+    row_number() over(partition by vendor_id, tpep_pickup_datetime) as rn
   from {{ source('staging','yellow_tripdata') }}
-  where vendorid is not null 
+  where vendor_id is not null 
 )
 select
    -- identifiers
-    {{ dbt_utils.generate_surrogate_key(['vendorid', 'tpep_pickup_datetime']) }} as tripid,    
-    {{ dbt.safe_cast("vendorid", api.Column.translate_type("integer")) }} as vendorid,
+    {{ dbt_utils.generate_surrogate_key(['vendor_id', 'tpep_pickup_datetime']) }} as tripid,    
+    {{ dbt.safe_cast("vendor_id", api.Column.translate_type("integer")) }} as vendor_id,
     {{ dbt.safe_cast("ratecodeid", api.Column.translate_type("integer")) }} as ratecodeid,
     {{ dbt.safe_cast("pulocationid", api.Column.translate_type("integer")) }} as pickup_locationid,
     {{ dbt.safe_cast("dolocationid", api.Column.translate_type("integer")) }} as dropoff_locationid,
