@@ -1,9 +1,0 @@
-version: 2
-
-sources:
-  - name: raw_nyc_tripdata
-    database: "{{ env_var('DBT_DATABASE', 'keen-dolphin-450409-m8') }}"
-    schema: "{{ env_var('DBT_SCHEMA', 'trips_data_all') }}"
-    tables:
-      - name: ext_green_taxi
-      - name: ext_yellow_taxi
