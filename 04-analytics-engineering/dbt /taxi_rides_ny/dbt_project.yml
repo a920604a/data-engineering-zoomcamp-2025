@@ -41,8 +41,7 @@ models:
       # Applies to all files under models/.../
       staging:
           materialized: view
-      core:
-          materialized: table
+          
 vars:
   payment_type_values: [1, 2, 3, 4, 5, 6]
 
