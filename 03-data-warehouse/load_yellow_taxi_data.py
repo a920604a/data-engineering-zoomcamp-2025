@@ -1,76 +1,90 @@
 import os
-import urllib.request
-from concurrent.futures import ThreadPoolExecutor
-from google.cloud import storage
+import requests
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from google.cloud import storage
+
+# 設定 GCS bucket 和本地資料夾路徑
+bucket_name = 'dtc-data-lake-tim'
+json_file =  "/home/tim/.gcp/google_credentials.json"  
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = json_file
+# Initialize a storage client
+storage_client = storage.Client()
+print("Storage client initialized.")
+# Get your bucket
+bucket = storage_client.get_bucket(bucket_name)
+print(f"Bucket {bucket_name} accessed.")
+max_workers = 10  # 最大線程數
 
 
-#Change this to your bucket name
-BUCKET_NAME = "dtc-data-lake-tim"  
+base_urls = {
+    'yellow': 'https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_',
+    'green': 'https://github.com/DataTalksClub/nyc-tlc-data/releases/download/green/green_tripdata_',
+    'fhv': 'https://github.com/DataTalksClub/nyc-tlc-data/releases/download/fhv/fhv_tripdata_'
+}
 
-#If you authenticated through the GCP SDK you can comment out these two lines
-CREDENTIALS_FILE = "/home/tim/.gcp/ny-rides.json"  
-client = storage.Client.from_service_account_json(CREDENTIALS_FILE)
-
-
-BASE_URL = "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-"
-MONTHS = [f"{i:02d}" for i in range(1, 7)] 
-DOWNLOAD_DIR = "."
-
-CHUNK_SIZE = 8 * 1024 * 1024  
-
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-bucket = client.bucket(BUCKET_NAME)
+years = ['2019', '2020']
+months = [str(month).zfill(2) for month in range(1, 13)]
 
 
-def download_file(month):
-    url = f"{BASE_URL}{month}.parquet"
-    file_path = os.path.join(DOWNLOAD_DIR, f"yellow_tripdata_2024-{month}.parquet")
+def download_and_upload(taxi_type, year, month):
+    """
+    下載數據並上傳到 GCS
+    """
+    if taxi_type == 'fhv' and year == '2020':
+        print(f"Skipping FHV data for year {year}")
+        return
 
+    url = f"{base_urls[taxi_type]}{year}-{month}.csv.gz"
     try:
-        print(f"Downloading {url}...")
-        urllib.request.urlretrieve(url, file_path)
-        print(f"Downloaded: {file_path}")
-        return file_path
+        print(f"Fetching data from: {url}")
+        response = requests.get(url, timeout=500)
+        response.raise_for_status()  # 檢查 HTTP 狀態碼
+        blob = bucket.blob(f"{taxi_type}_tripdata_{year}-{month}.csv.gz")
+        blob.upload_from_string(response.content)
+        print(f"Successfully uploaded {taxi_type}_tripdata_{year}-{month}.csv.gz to GCS")
+    except requests.RequestException as e:
+        print(f"Error downloading {url}: {e}")
     except Exception as e:
-        print(f"Failed to download {url}: {e}")
-        return None
+        print(f"An error occurred while processing {url}: {e}")
 
 
-def verify_gcs_upload(blob_name):
-    return storage.Blob(bucket=bucket, name=blob_name).exists(client)
+def download_and_upload(taxi_type, year, month):
+    """
+    下載數據並上傳到 GCS
+    """
+    if taxi_type == 'fhv' and year == '2020':
+        print(f"Skipping FHV data for year {year}")
+        return
 
-
-def upload_to_gcs(file_path, max_retries=3):
-    blob_name = os.path.basename(file_path)
-    blob = bucket.blob(blob_name)
-    blob.chunk_size = CHUNK_SIZE  
-    
-    for attempt in range(max_retries):
-        try:
-            print(f"Uploading {file_path} to {BUCKET_NAME} (Attempt {attempt + 1})...")
-            blob.upload_from_filename(file_path)
-            print(f"Uploaded: gs://{BUCKET_NAME}/{blob_name}")
-            
-            if verify_gcs_upload(blob_name):
-                print(f"Verification successful for {blob_name}")
-                return
-            else:
-                print(f"Verification failed for {blob_name}, retrying...")
-        except Exception as e:
-            print(f"Failed to upload {file_path} to GCS: {e}")
+    url = f"{base_urls[taxi_type]}{year}-{month}.csv.gz"
+    try:
+        print(f"Fetching data from: {url}")
+        response = requests.get(url, timeout=500)
+        response.raise_for_status()  # 檢查 HTTP 狀態碼
+        blob = bucket.blob(f"{taxi_type}_tripdata_{year}-{month}.csv.gz")
+        blob.upload_from_string(response.content)
+        print(f"Successfully uploaded {taxi_type}_tripdata_{year}-{month}.csv.gz to GCS")
+    except requests.RequestException as e:
+        print(f"Error downloading {url}: {e}")
+    except Exception as e:
+        print(f"An error occurred while processing {url}: {e}")
         
-        time.sleep(5)  
-    
-    print(f"Giving up on {file_path} after {max_retries} attempts.")
+def main():
+    # 創建任務列表
+    tasks = []
+    for taxi_type, base_url in base_urls.items():
+        for year in years:
+            for month in months:
+                tasks.append((taxi_type, year, month))
+
+    # 使用 ThreadPoolExecutor 並行處理
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(download_and_upload, *task) for task in tasks]
+        for future in as_completed(futures):
+            future.result()  # 等待任務完成並處理異常
 
 
-if __name__ == "__main__":
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        file_paths = list(executor.map(download_file, MONTHS))
-
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        executor.map(upload_to_gcs, filter(None, file_paths))  # Remove None values
-
-    print("All files processed and verified.")
+if __name__ == '__main__':
+    main()
