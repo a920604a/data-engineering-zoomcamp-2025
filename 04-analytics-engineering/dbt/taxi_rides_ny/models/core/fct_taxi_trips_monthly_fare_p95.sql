@@ -1,27 +1,35 @@
-WITH clean_fact_trips AS (
-    SELECT
-        service_type,
-        EXTRACT(YEAR FROM pickup_datetime) AS year,
-        EXTRACT(MONTH FROM pickup_datetime) AS month,
-        fare_amount,
-        trip_distance,
-        payment_type_description
-    FROM {{ ref('fact_trips') }}
-    WHERE
-        fare_amount > 0
-        AND trip_distance > 0
-        -- AND lower(payment_type_description) in ('cash', 'credit card')
-),
+with
+    clean_fact_trips as (
+        select
+            service_type,
+            extract(year from pickup_datetime) as year,
+            extract(month from pickup_datetime) as month,
+            fare_amount,
+            trip_distance,
+            payment_type_description
+        from {{ ref("fact_trips") }}
+        where
+            fare_amount > 0
+            and trip_distance > 0
+            and lower(payment_type_description) in ('cash', 'credit card')
+    ),
 
-fare_amt_perc AS(
-    SELECT
-        service_type,
-        year,
-        month,
-        PERCENTILE_CONT(fare_amount, 0.97) OVER (PARTITION BY service_type, year, month) AS p97,
-        PERCENTILE_CONT(fare_amount, 0.95) OVER (PARTITION BY service_type, year, month) AS p95,
-        PERCENTILE_CONT(fare_amount, 0.90) OVER (PARTITION BY service_type, year, month) AS p90
-    FROM clean_fact_trips
-)
+    fare_amt_perc as (
+        select
+            service_type,
+            year,
+            month,
+            percentile_cont(fare_amount, 0.97) over (
+                partition by service_type, year, month
+            ) as p97,
+            percentile_cont(fare_amount, 0.95) over (
+                partition by service_type, year, month
+            ) as p95,
+            percentile_cont(fare_amount, 0.90) over (
+                partition by service_type, year, month
+            ) as p90
+        from clean_fact_trips
+    )
 
-SELECT * FROM fare_amt_perc
+select *
+from fare_amt_perc
