@@ -20,7 +20,7 @@ select
 
     -- timestamps
     cast(pickup_datetime as timestamp) as pickup_datetime,
-    cast(dropOff_datetime as timestamp) as dropoff_datetime,
+    cast(dropoff_datetime as timestamp) as dropoff_datetime,
 
     -- trip info
     SR_Flag,
