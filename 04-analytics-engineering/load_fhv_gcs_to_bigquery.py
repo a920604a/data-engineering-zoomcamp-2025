@@ -61,7 +61,7 @@ def main():
         return
 
     # 設定目標表格 ID
-    destination_table_id = f"{project_id}.{dataset_id}.fhv_tripdata_2019_all"
+    destination_table_id = f"{project_id}.{dataset_id}.fhv_tripdata"
 
     # 加載每個文件到同一張 BigQuery 表格
     for file in files:
