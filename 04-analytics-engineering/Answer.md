@@ -10,7 +10,7 @@ When using staging, it materializes in the dataset defined in DBT_BIGQUERY_STAGI
 
 `dbt build --vars "{'is_test_run': false}"`
 
-- [here](dbt//taxi_rides_ny/models/core/fct_taxi_trips_monthly_fare_p95.sql)
+- [here](./dbt/taxi_rides_ny/models/core/fct_taxi_trips_monthly_fare_p95.sql)
 ```
 SELECT service_type, year, month, p97, p95, p90
 FROM `keen-dolphin-450409-m8.dbt_ychen.fct_taxi_trips_monthly_fare_p95`
