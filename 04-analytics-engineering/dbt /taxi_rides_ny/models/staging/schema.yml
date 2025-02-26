@@ -2,12 +2,13 @@ version: 2
 
 sources:
   - name: staging
-    database: "{{ env_var('DBT_DATABASE', 'taxi-rides-ny-339813-412521') }}"
+    database: "{{ env_var('DBT_DATABASE', 'keen-dolphin-450409-m8') }}"
     schema: "{{ env_var('DBT_SCHEMA', 'trips_data_all') }}"
       # loaded_at_field: record_loaded_at
     tables:
       - name: green_tripdata
       - name: yellow_tripdata
+      - name: fhv_tripdata
          # freshness:
            # error_after: {count: 6, period: hour}
 
@@ -194,3 +195,35 @@ models:
             description: Total amount of all tolls paid in trip.
           - name: Total_amount 
             description: The total amount charged to passengers. Does not include cash tips.
+    - name: stg_fhv_tripdata
+      description: >
+        Trip made by fhv, also known as for-hire vehicles.
+        The records were collected and provided to the NYC Taxi and Limousine Commission (TLC) by
+        technology service providers.
+      columns:
+          - name: dispatching_base_num
+            description: dispatching_base_num
+          - name: pickup_datetime
+            description: The date and time when the meter was engaged.
+          - name: dropOff_datetime
+            description: The date and time when the meter was disengaged.
+          - name: Affiliated_base_numbe
+            description: Affiliated_base_numbe
+          - name: PUlocationID
+            description: locationid where the meter was engaged.
+            tests:
+              - relationships:
+                  to: ref('taxi_zone_lookup')
+                  field: locationid
+                  severity: warn
+          - name: DOlocationID
+            description: locationid where the meter was engaged.
+            tests:
+              - relationships:
+                  to: ref('taxi_zone_lookup')
+                  field: locationid
+          - name: SR_Flag
+            description: >
+              This flag indicates ?
+                Y =
+                N =

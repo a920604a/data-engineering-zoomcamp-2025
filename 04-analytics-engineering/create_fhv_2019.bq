@@ -1,0 +1,6 @@
+
+
+
+bq load --source_format=CSV --skip_leading_rows=1 --autodetect \
+    keen-dolphin-450409-m8:trips_data_all.fhv_tripdata \
+    gs://dtc-data-lake-tim/fhv_tripdata_2019-01.csv.gz
