@@ -37,3 +37,12 @@ green: {p97: 55.0, p95: 45.0, p90: 26.5}, yellow: {p97: 31.5, p95: 25.5, p90: 19
 7. 
 
 LaGuardia Airport, Chinatown, Garment District
+`dbt run --select +fct_fhv_monthly_zone_traveltime_p90`
+
+```sql
+SELECT *
+FROM `keen-dolphin-450409-m8.dbt_ychen.fct_fhv_monthly_zone_traveltime_p90`
+WHERE pickup_zone IN ('SoHo') AND year = 2019 and month = 11
+ORDER BY p90 DESC
+LIMIT 100;
+```
