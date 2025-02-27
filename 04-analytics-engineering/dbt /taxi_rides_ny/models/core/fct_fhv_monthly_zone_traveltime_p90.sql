@@ -13,3 +13,7 @@ WITH trip_dur_perc AS (
 -- year, month, pickup_location_id, and dropoff_location_id
 
 SELECT * FROM trip_dur_perc
+where pickup_zone in ('Yorkville East') and year = 2019 and month = 11
+
+order by
+    p90 desc
