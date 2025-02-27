@@ -35,6 +35,7 @@ green: {p97: 55.0, p95: 45.0, p90: 26.5}, yellow: {p97: 31.5, p95: 25.5, p90: 19
 
 
 7. 
+- [here](./dbt/taxi_rides_ny/models/core/fct_fhv_monthly_zone_traveltime_p90.sql)
 
 LaGuardia Airport, Chinatown, Garment District
 `dbt run --select +fct_fhv_monthly_zone_traveltime_p90`
