@@ -42,7 +42,7 @@ LaGuardia Airport, Chinatown, Garment District
 ```sql
 SELECT *
 FROM `keen-dolphin-450409-m8.dbt_ychen.fct_fhv_monthly_zone_traveltime_p90`
-WHERE pickup_zone IN ('SoHo') AND year = 2019 and month = 11
+WHERE pickup_zone IN ('Newark Airport', 'SoHo', 'Yorkville East') AND year = 2019 and month = 11
 ORDER BY p90 DESC
 LIMIT 100;
 ```
