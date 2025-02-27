@@ -15,7 +15,7 @@ SELECT * FROM keen-dolphin-450409-m8.dbt_ychen.fct_taxi_trips_quarterly_revenue
 
 WHERE year = 2020
 
-ORDER BY yoy_growth DESC; 
+ORDER BY total_amount DESC; 
 
 ```
 6. 
