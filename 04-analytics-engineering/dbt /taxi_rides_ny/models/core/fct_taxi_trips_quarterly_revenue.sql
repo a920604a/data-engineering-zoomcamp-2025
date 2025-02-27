@@ -1,32 +1,37 @@
-with quarterly_revenue as (
-    select 
-        extract(year from pickup_datetime) as year,
-        extract(quarter from pickup_datetime) as quarter,
-        concat(extract(year from pickup_datetime), '/Q', extract(quarter from pickup_datetime)) as year_quarter,
-        taxi_type,  -- Assuming we have a column to distinguish between Green and Yellow taxis
-        sum(total_amount) as quarterly_revenue
-    from `keen-dolphin-450409-m8.dbt_ychen.fct_taxi_trips`
-    group by 1, 2, 3, 4
+{{
+    config(
+        materialized='table'
+    )
+}}
+
+with temp as (
+    SELECT EXTRACT(YEAR FROM pickup_datetime) AS year, 
+EXTRACT(QUARTER FROM pickup_datetime) AS quarter, service_type, total_amount
+    from {{ ref('fact_trips') }}
 ),
-
-yoy_growth as (
-    select 
-        curr.year, 
-        curr.quarter, 
-        curr.year_quarter,
-        curr.taxi_type,
-        curr.quarterly_revenue,
-        prev.quarterly_revenue as prev_year_revenue,
-        round(
-            (curr.quarterly_revenue - prev.quarterly_revenue) / nullif(prev.quarterly_revenue, 0) * 100, 
-            2
-        ) as yoy_revenue_growth
-    from quarterly_revenue curr
-    left join quarterly_revenue prev 
-        on curr.taxi_type = prev.taxi_type
-        and curr.quarter = prev.quarter
-        and curr.year = prev.year + 1  -- Join with the previous year's same quarter
+grouped as (
+    select service_type, year, quarter, sum(total_amount) as total_amount from temp
+group by service_type, year, quarter
 )
-
-select * from yoy_growth
-order by year desc, quarter;
+SELECT 
+    service_type,
+    year,
+    quarter,
+    total_amount,
+    LAG(total_amount) OVER (
+        PARTITION BY service_type, quarter ORDER BY year
+    ) AS prev_year_total_amount,
+    CASE 
+        WHEN LAG(total_amount) OVER (
+            PARTITION BY service_type, quarter ORDER BY year
+        ) = 0 THEN NULL  -- Avoid division by zero
+        ELSE ROUND(
+            (total_amount - LAG(total_amount) OVER (
+                PARTITION BY service_type, quarter ORDER BY year
+            )) / NULLIF(LAG(total_amount) OVER (
+                PARTITION BY service_type, quarter ORDER BY year
+            ), 0) * 100, 2
+        )
+    END AS yoy_percentage_change
+FROM grouped
+ORDER BY service_type, year, quarter
