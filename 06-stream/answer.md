@@ -168,7 +168,7 @@ t0 = time()
 t1 = time()
 took = t1 - t0
 ```
-
+![](./assets/04.png)
 `52.51`
 
 How much time did it take to send the entire dataset and flush? 
@@ -184,6 +184,10 @@ Now we have the data in the Kafka stream. It's time to process it.
 * Use `lpep_dropoff_datetime` time as your watermark with a 5 second tolerance
 * Which pickup and drop off locations have the longest unbroken streak of taxi trips?
 
+```
+make green_taxi_job 
+
+```
 
 ## Submitting the solutions
 
