@@ -87,6 +87,8 @@ What's the output of the command for creating a topic? Include the entire output
 
 ![](assets/02.png)
 
+`docker exec -it redpanda-1 rpk topic create green-trips`
+
 ## Question 3. Connecting to the Kafka server
 
 We need to make sure we can connect to the server, so
@@ -169,7 +171,6 @@ t1 = time()
 took = t1 - t0
 ```
 ![](./assets/04.png)
-`52.51`
 
 How much time did it take to send the entire dataset and flush? 
 
@@ -185,10 +186,25 @@ Now we have the data in the Kafka stream. It's time to process it.
 * Which pickup and drop off locations have the longest unbroken streak of taxi trips?
 
 ```
+DROP TABLE processed_events_aggregated;
+
+CREATE TABLE processed_events_aggregated
+(
+	PULocationID integer,
+	DOLocationID integer,
+	session_start timestamp(3),
+	session_end timestamp(3),
+	num_trips BIGINT,
+	PRIMARY KEY (PULocationID, DOLocationID, session_start)
+);
+
 make green_taxi_job 
 
+SELECT * FROM public.processed_events_aggregated
+ORDER BY num_trips DESC;
 ```
 
+![](./assets/05.png)
 ## Submitting the solutions
 
 - Form for submitting: https://courses.datatalks.club/de-zoomcamp-2025/homework/hw6

@@ -12,4 +12,4 @@ producer = KafkaProducer(
     value_serializer=json_serializer
 )
 
-producer.bootstrap_connected()
+print(producer.bootstrap_connected())
