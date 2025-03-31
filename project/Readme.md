@@ -2,7 +2,7 @@
 
 - Infrastructure as code (IaC): Terraform 
     - to create GCS dataset and BigQuery
-- Workflow orchestration : Ariflow
+- Workflow orchestration : Airflow
 - Data Warehouse : Clickhouse
 - Batch Processing : Spark
 - Metabase/Redash/Superset/Streamlit 它是另一個可視化數據
