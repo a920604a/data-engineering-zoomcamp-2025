@@ -1,0 +1,11 @@
+spotipy 
+pandas 
+matplotlib 
+seaborn
+
+apache-airflow-providers-google
+apache-airflow[google]
+pyarrow
+py4j
+pyspark
+pandas

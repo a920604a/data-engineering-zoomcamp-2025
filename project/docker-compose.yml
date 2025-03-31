@@ -1,0 +1,12 @@
+services:
+  db:
+    container_name: zoomcamp-project-postgres
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres'
+      POSTGRES_DB: 'gharchive'
+    ports:
+      - '5433:5432'
+    volumes:
+      - ./vol-pgdata:/var/lib/postgresql/data
