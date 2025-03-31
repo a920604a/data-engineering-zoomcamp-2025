@@ -16,7 +16,7 @@ https://github.com/guoliveira/data-engineer-zoomcamp-project/tree/main
 
 ## Pipeline
 1. Create Cloud resource [terraform]
-2. Create BugQuery table schema [sql]
+2. Create BigQuery table schema [sql]
 3. Data pipeline [airflow], EL
 4.  [PySpark]
 5. Visualize [Superset]
