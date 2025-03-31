@@ -31,7 +31,7 @@ resource "google_storage_bucket" "gharchive" {
 
 
 
-# resource "google_bigquery_dataset" "gharchive" {
-#   dataset_id = var.bq_dataset_name
-#   location   = var.location
-# }
+resource "google_bigquery_dataset" "gharchive" {
+  dataset_id = var.bq_dataset_name
+  location   = var.location
+}

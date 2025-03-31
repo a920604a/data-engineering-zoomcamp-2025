@@ -11,8 +11,12 @@ from airflow import DAG
 from datetime import datetime, timedelta
 import gzip
 import json
+from io import StringIO
 import os
+import itertools
 import logging
+from pathlib import Path
+import pandas as pd
 import psycopg2
 
 # 設定 Logger
@@ -28,23 +32,25 @@ BQ_DATASET_AREA = "US"
 BQ_TABLE = "watch_events"
 
 
-# PostgreSQL 連線配置
-DB_CONN = {
-    "dbname": "zoomcamp",
-    "user": "zoomcamp",
-    "password": "zoomcamp",
-    "host": "postgres-dz",
-    "port": "5432",
-}
-
-path_to_local_home = os.environ.get("AIRFLOW_HOME", "/opt/airflow")
-
+# # PostgreSQL 連線配置
+# DB_CONN = {
+#     "dbname": "zoomcamp",
+#     "user": "zoomcamp",
+#     "password": "zoomcamp",
+#     "host": "postgres-dz",
+#     "port": "5432",
+# }
 default_args = {
     "owner": "airflow",
     "start_date": datetime(2025, 3, 24),
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
+
+
+path_to_local_home = os.environ.get("AIRFLOW_HOME", "/opt/airflow")
+
+
 
 with DAG(
     dag_id="cloud_gharchive_dag",
@@ -66,175 +72,73 @@ with DAG(
     os.makedirs(f"{path_to_local_home}/data", exist_ok=True)
 
     # 下載 GH Archive 數據
-    download_dataset_task = BashOperator(
-        task_id="download_dataset",
-        bash_command=f"wget {dataset_url} -O {local_gz_path}"
+    fetch_data_task = BashOperator(
+        task_id="fetch_data",
+        bash_command=f"wget {dataset_url} -O {local_gz_path} && gzip -d {local_gz_path}"
     )
-
-    # 上傳 .json.gz 到 Google Cloud Storage
-    upload_to_gcs_task = LocalFilesystemToGCSOperator(
-        task_id="upload_to_gcs",
-        src=local_gz_path,
-        dst=gcs_gz_path,
-        bucket=GCS_BUCKET,
-        mime_type="application/gzip"
-    )
-
-    # 從 GCS 下載 .json.gz
-    download_from_gcs_task = GCSToLocalFilesystemOperator(
-        task_id="download_from_gcs",
-        bucket=GCS_BUCKET,
-        object_name=gcs_gz_path,
-        filename=local_gz_path
-    )
-
-    # # 解壓縮 .gz 檔案
-    def extract_gz_file():
-        with gzip.open(local_gz_path, "rt", encoding="utf-8") as f_in, open(local_json_path, "w", encoding="utf-8") as f_out:
-            f_out.write(f_in.read())
-        logger.info(f"解壓縮完成: {local_json_path}")
-
-    extract_task = PythonOperator(
-        task_id="extract_gz",
-        python_callable=extract_gz_file
-    )
-
     
+    def ingest_and_save_data(dataset_name: str):
+        print(f"{dataset_name}")
+        '''直接讀取 JSON 並儲存為 Parquet'''
+        path_to_json = f"{path_to_local_home}/data/{dataset_name}"
+        path_to_parquet = f"{path_to_local_home}/data/{dataset_name}.parquet"
+        
+        try:
+            dfs = []
+            with open(path_to_json, 'r') as f:
+                while True:
+                    lines = list(itertools.islice(f, 1000))
+                    if not lines:
+                        break
+                    dfs.append(pd.read_json(StringIO(''.join(lines)), lines=True))
 
-    create_bq_dataset_task = BigQueryCreateEmptyDatasetOperator(
-        task_id="create_bq_dataset",
-        dataset_id=BQ_DATASET,
-        project_id=BQ_PROJECT,
-        location=BQ_DATASET_AREA,  # 需要與你的 BigQuery 設定相符
+            df = pd.concat(dfs)
+
+            # 儲存為 Parquet
+            df.to_parquet(path_to_parquet, compression="gzip")
+            logger.info(f"成功儲存 Parquet: {path_to_parquet}")
+
+            # 刪除 JSON 檔案以節省空間
+            os.remove(path_to_json)
+            logger.info(f"已刪除 JSON 檔案: {path_to_json}")
+
+        except Exception as e:
+            logger.error(f"處理資料時發生錯誤: {e}")
+            raise
+
+        return path_to_parquet  # 但不會存入 XCom
+
+    ingest_and_save_task = PythonOperator(
+        task_id="ingest_and_save",
+        python_callable=ingest_and_save_data,
+        op_kwargs={"dataset_name": dataset_file.replace(".gz", "")},
+        do_xcom_push=False  # 避免將大資料存入 XCom
+    )
+    
+    # 將 Parquet 檔案上傳至 GCS
+    load_gcs_task = LocalFilesystemToGCSOperator(
+        task_id="load_gcs",
+        src=f"{path_to_local_home}/data/{dataset_file.replace('.gz', '')}.parquet",
+        dst=gcs_gz_path.replace(".gz", ".parquet"),
+        bucket=GCS_BUCKET,
+        mime_type="application/octet-stream",
     )
 
-
-    bigquery_external_table_task = BigQueryCreateExternalTableOperator(
-        task_id="create_external_table",
+    load_bigquery_task = BigQueryCreateExternalTableOperator(
+        task_id="create_bq_external_table",
         table_resource={
             "tableReference": {
-                "projectId": "dz-final-project",
-                "datasetId": "gharchive",
-                "tableId": "watch_events_external_table",
+                "projectId": BQ_PROJECT,
+                "datasetId": BQ_DATASET,
+                "tableId": BQ_TABLE,
             },
             "externalDataConfiguration": {
-                "sourceUris": ["gs://dz-data-lake/gharchive/*.json.gz"],
-                "sourceFormat": "NEWLINE_DELIMITED_JSON",
-                "compression": "GZIP",
-                "schema": {
-                    "fields": [
-                    {"name": "id", "type": "STRING"},
-                    {"name": "type", "type": "STRING"},
-                    {"name": "actor", "type": "RECORD", "fields": [
-                        {"name": "id", "type": "STRING"},
-                        {"name": "login", "type": "STRING"},
-                        {"name": "display_login", "type": "STRING"},
-                        {"name": "gravatar_id", "type": "STRING"},
-                        {"name": "url", "type": "STRING"},
-                        {"name": "avatar_url", "type": "STRING"},
-                    ]},
-                    {"name": "repo", "type": "RECORD", "fields": [
-                        {"name": "id", "type": "STRING"},
-                        {"name": "name", "type": "STRING"},
-                        {"name": "url", "type": "STRING"},
-                    ]},
-                    {"name": "payload", "type": "RECORD", "fields": [
-                        {"name": "repository_id", "type": "STRING"},
-                        {"name": "push_id", "type": "STRING"},
-                        {"name": "size", "type": "INTEGER"},
-                        {"name": "distinct_size", "type": "INTEGER"},
-                        {"name": "ref", "type": "STRING"},
-                        {"name": "head", "type": "STRING"},
-                        {"name": "before", "type": "STRING"},
-                        {"name": "commits", "type": "RECORD", "fields": [
-                            {"name": "sha", "type": "STRING"},
-                            {"name": "author", "type": "RECORD", "fields": [
-                                {"name": "email", "type": "STRING"},
-                                {"name": "name", "type": "STRING"},
-                            ]},
-                            {"name": "message", "type": "STRING"},
-                            {"name": "distinct", "type": "BOOLEAN"},
-                            {"name": "url", "type": "STRING"},
-                        ]},
-                    ]},
-                    {"name": "public", "type": "BOOLEAN"},
-                    {"name": "created_at", "type": "TIMESTAMP"},
-                ]
-                },
-             "ignoreUnknownValues": True,  # 忽略未知欄位
+                "sourceUris": [f"gs://{GCS_BUCKET}/{gcs_gz_path.replace('.gz', '.parquet')}"],
+                "sourceFormat": "PARQUET",
             },
         },
     )
 
-
-    # # 將解壓縮的 JSON 存入 BigQuery
-    insert_into_bigquery_task = BigQueryInsertJobOperator(
-        task_id="insert_into_bigquery",
-        configuration={
-            "query": {
-                "query": f"""
-                    CREATE OR REPLACE TABLE `{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE}`
-                    PARTITION BY DATE(created_at)
-                    AS
-                    SELECT * FROM `{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE}_external_table`
-                """,
-                "useLegacySql": False,
-            }
-        },
-        location="US",
-    )
-
-
-    # # 刪除本地解壓縮的 JSON 檔案
-    def delete_local_json():
-        if os.path.exists(local_json_path):
-            os.remove(local_json_path)
-            logger.info(f"已刪除本地 JSON 文件: {local_json_path}")
-
-    delete_json_task = PythonOperator(
-        task_id="delete_local_json",
-        python_callable=delete_local_json
-    )
-
-    # # 過濾 `WatchEvent` 並存入 PostgreSQL
-    # def process_watch_events():
-    #     with open(local_json_path, "r", encoding="utf-8") as f:
-    #         events = [json.loads(line) for line in f]
-
-    #     watch_events = [
-    #         (event["id"], event["repo"]["name"], event["public"], event["created_at"])
-    #         for event in events if event.get("type") == "WatchEvent"
-    #     ]
-
-    #     if not watch_events:
-    #         logger.info("No WatchEvent found.")
-    #         return
-
-    #     conn = psycopg2.connect(**DB_CONN)
-    #     cur = conn.cursor()
-    #     sql = """
-    #     INSERT INTO watch_events (id, repo_name, public, created_at) 
-    #     VALUES (%s, %s, %s, %s)
-    #     ON CONFLICT (id) DO NOTHING;
-    #     """
-        
-    #     cur.executemany(sql, watch_events)
-    #     conn.commit()
-    #     cur.close()
-    #     conn.close()
-    #     logger.info(f"{len(watch_events)} WatchEvent(s) inserted into DB.")
-
-    # process_task = PythonOperator(
-    #     task_id="process_watch_events",
-    #     python_callable=process_watch_events
-    # )
-    
-    # analyze_task = BashOperator(
-    #     task_id="analyze_stars",
-    #     bash_command="spark-submit --master local[*] /opt/airflow/scripts/analyze_stars.py"
-    # )
-
     # DAG Task 執行順序
-    download_dataset_task >> upload_to_gcs_task >> download_from_gcs_task
-    download_from_gcs_task >> extract_task >> create_bq_dataset_task >> bigquery_external_table_task >> insert_into_bigquery_task >> delete_json_task
-    # extract_task >> process_task >> analyze_task
+    fetch_data_task >> ingest_and_save_task >> load_gcs_task >> load_bigquery_task
+    
