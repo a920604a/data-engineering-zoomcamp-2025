@@ -25,3 +25,4 @@
 ## Stream Processing
 `Kafka` 2023 2024 2025
 `redpanda` 2024
+`flink` 2025

@@ -18,6 +18,8 @@ import logging
 from pathlib import Path
 import pandas as pd
 import psycopg2
+from pyspark.sql.functions import col, count
+from pyspark.sql import SparkSession
 
 # 設定 Logger
 logger = logging.getLogger(__name__)
@@ -93,9 +95,24 @@ with DAG(
                     dfs.append(pd.read_json(StringIO(''.join(lines)), lines=True))
 
             df = pd.concat(dfs)
+            
+            
+            
+            df["created_at"] = pd.to_datetime(df["created_at"])
+
+            # 移除時區（轉為 naive datetime）
+            df["created_at"] = df["created_at"].dt.tz_localize(None)
+
+            # 轉換為 datetime64[ms]（毫秒精度）
+            df["created_at"] = df["created_at"].astype("datetime64[ms]")
+
+            # 重新儲存成 Parquet
+            df.to_parquet(f"{path_to_parquet}", engine="pyarrow", compression="gzip")
+        
+        
 
             # 儲存為 Parquet
-            df.to_parquet(path_to_parquet, compression="gzip")
+            # df.to_parquet(path_to_parquet, compression="gzip")
             logger.info(f"成功儲存 Parquet: {path_to_parquet}")
 
             # 刪除 JSON 檔案以節省空間
@@ -111,34 +128,83 @@ with DAG(
     ingest_and_save_task = PythonOperator(
         task_id="ingest_and_save",
         python_callable=ingest_and_save_data,
-        op_kwargs={"dataset_name": dataset_file.replace(".gz", "")},
+        op_kwargs={"dataset_name": dataset_file.replace(".json", "")},
         do_xcom_push=False  # 避免將大資料存入 XCom
     )
     
-    # 將 Parquet 檔案上傳至 GCS
-    load_gcs_task = LocalFilesystemToGCSOperator(
-        task_id="load_gcs",
-        src=f"{path_to_local_home}/data/{dataset_file.replace('.gz', '')}.parquet",
-        dst=gcs_gz_path.replace(".gz", ".parquet"),
-        bucket=GCS_BUCKET,
-        mime_type="application/octet-stream",
-    )
+    # def clean_with_spark(local: str):
+    #     print(f"local: {local}")
+        
+    #     # 檢查檔案是否存在
+    #     if not os.path.exists(local):
+    #         raise FileNotFoundError(f"The file at {local} does not exist.")
+        
+    #     # 啟動 SparkSession
+    #     spark = SparkSession.builder.master("local[*]").appName('test').getOrCreate()
+            
 
-    load_bigquery_task = BigQueryCreateExternalTableOperator(
-        task_id="create_bq_external_table",
-        table_resource={
-            "tableReference": {
-                "projectId": BQ_PROJECT,
-                "datasetId": BQ_DATASET,
-                "tableId": BQ_TABLE,
-            },
-            "externalDataConfiguration": {
-                "sourceUris": [f"gs://{GCS_BUCKET}/{gcs_gz_path.replace('.gz', '.parquet')}"],
-                "sourceFormat": "PARQUET",
-            },
-        },
-    )
+        
+    #     # 讀取 BigQuery 資料
+    #     df = spark.read.option("header", "true").parquet(f'{local}')
+
+        
+    #     # 過濾 PushEvent 並計算 push 次數
+    #     df_filtered = df.filter(col("type") == "PushEvent") \
+    #             .groupBy("repo.name") \
+    #             .agg(count("*").alias("push_count")) \
+    #             .orderBy(col("push_count").desc())
+
+    #     # 確保輸出路徑為資料夾，而不是檔案
+    #     output_dir = os.path.join(local, "data/")
+        
+    #     # 如果資料夾不存在，創建資料夾
+    #     if not os.path.exists(output_dir):
+    #         os.makedirs(output_dir)
+
+    #     # 寫入 Parquet 資料
+    #     df_filtered.write.parquet(output_dir, mode='overwrite')
+
+
+
+    #     print(f"資料處理完成，儲存至 {output_dir}")
+       
+
+    # spark_clean_task = PythonOperator(
+    #     task_id=f'spark_clean',
+    #     python_callable=clean_with_spark,
+    #     op_kwargs={            
+    #         "local": f"{path_to_local_home}/data/{dataset_file.replace('.gz', '')}"
+    #     }
+    # )
+        
+        
+    
+    # 將 Parquet 檔案上傳至 GCS
+    # load_gcs_task = LocalFilesystemToGCSOperator(
+    #     task_id="load_gcs",
+    #     src=f"{path_to_local_home}/data/{dataset_file.replace('.gz', '')}.parquet",
+    #     dst=gcs_gz_path.replace(".gz", ".parquet"),
+    #     bucket=GCS_BUCKET,
+    #     mime_type="application/octet-stream",
+    # )
+
+    # load_bigquery_task = BigQueryCreateExternalTableOperator(
+    #     task_id="create_bq_external_table",
+    #     table_resource={
+    #         "tableReference": {
+    #             "projectId": BQ_PROJECT,
+    #             "datasetId": BQ_DATASET,
+    #             "tableId": BQ_TABLE,
+    #         },
+    #         "externalDataConfiguration": {
+    #             "sourceUris": [f"gs://{GCS_BUCKET}/{gcs_gz_path.replace('.gz', '.parquet')}"],
+    #             "sourceFormat": "PARQUET",
+    #         },
+    #     },
+    # )
+    
 
     # DAG Task 執行順序
-    fetch_data_task >> ingest_and_save_task >> load_gcs_task >> load_bigquery_task
+    fetch_data_task >> ingest_and_save_task
+    # >> load_gcs_task >> load_bigquery_task
     
