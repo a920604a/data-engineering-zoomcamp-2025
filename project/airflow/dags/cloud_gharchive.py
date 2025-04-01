@@ -128,7 +128,7 @@ with DAG(
     ingest_and_save_task = PythonOperator(
         task_id="ingest_and_save",
         python_callable=ingest_and_save_data,
-        op_kwargs={"dataset_name": dataset_file.replace(".json", "")},
+        op_kwargs={"dataset_name": dataset_file.replace(".gz", "")},
         do_xcom_push=False  # 避免將大資料存入 XCom
     )
     
@@ -173,7 +173,7 @@ with DAG(
     #     task_id=f'spark_clean',
     #     python_callable=clean_with_spark,
     #     op_kwargs={            
-    #         "local": f"{path_to_local_home}/data/{dataset_file.replace('.gz', '')}"
+    #         "local": f"{path_to_local_home}/data/{dataset_file.replace('.parquet', '')}"
     #     }
     # )
         
