@@ -113,6 +113,7 @@ with DAG(
         output_dir = os.path.join(os.path.dirname(local), f"{GCS_PROCESS_PATH}/")
         os.makedirs(output_dir, exist_ok=True)
         df_filtered.write.parquet(output_dir, mode='overwrite')
+        print(df_filtered.head(20))
 
         parquet_files = [
             os.path.join(output_dir, f)
