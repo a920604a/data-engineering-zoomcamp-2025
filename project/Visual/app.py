@@ -12,12 +12,14 @@ BQ_TABLE = "github_archive"
 
 def get_push_events():
     query = f"""
-        SELECT name AS repo_name
+        SELECT name AS repo_name, push_count
         FROM `{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE}`
         ORDER BY push_count DESC
         LIMIT 100
     """
     df = client.query(query).to_dataframe()
+    df["url"] = df["repo_name"].apply(lambda name: f"http://github.com/{name}")
+    df["link"] = df["url"].apply(lambda url: f'<a href="{url}" target="_blank">點我</a>')  # 👈 加上超連結
     return df
 
 # 用戶界面
@@ -30,24 +32,21 @@ st.markdown(
     <p style="text-align: center; color: #7B7B7B;">這是根據 GitHub 的 PushEvent 統計最熱門的 repositories</p>
     """, unsafe_allow_html=True)
 
-
 # 顯示資料
 df = get_push_events()
 if df.empty:
     st.write("沒有資料")
 else:
-    # 設定顏色並顯示柱狀圖
-    st.bar_chart(df.set_index("repo_name"), use_container_width=True)
+    # 顯示柱狀圖
+    st.bar_chart(df.set_index("repo_name")["push_count"], use_container_width=True)
 
-    # 美化表格
+    # 顯示表格（帶超連結）
     st.write("### Repository Details")
-    st.table(df.style.set_table_styles(
-        [{
-            'selector': 'thead th',
-            'props': [('background-color', '#2D9CDB'), ('color', 'white'), ('text-align', 'center')],
-        }, {
-            'selector': 'tbody td',
-            'props': [('text-align', 'center'), ('padding', '10px')],
-        }]
-    ))
-   
+    df_display = df[["repo_name", "push_count", "link"]].rename(columns={
+        "repo_name": "Repository",
+        "push_count": "Push 次數",
+        "link": "連結"
+    })
+
+    # 👇 用 HTML 顯示表格，才能保留 <a href> 超連結
+    st.write(df_display.to_html(escape=False, index=False), unsafe_allow_html=True)
