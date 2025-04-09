@@ -30,7 +30,7 @@ GCS_PROCESS_PATH = Variable.get("GCS_PROCESS_PATH")
 BQ_PROJECT = Variable.get("BQ_PROJECT")
 BQ_DATASET = Variable.get("BQ_DATASET")
 BQ_DATASET_AREA = Variable.get("BQ_DATASET_AREA")
-BG_TABLE = Variable.get("BG_TABLE") 
+BQ_TABLE = Variable.get("BQ_TABLE") 
 
 
 default_args = {
@@ -151,8 +151,8 @@ with DAG(
     load_gcs_to_bq = GCSToBigQueryOperator(
         task_id='load_gcs_to_bq',
         bucket=GCS_BUCKET,
-        source_objects=[f"{GCS_PROCESS_PATH}/{dataset_file.replace('.gz', '.parquet').replace('.json', '')}/*.parquet"],  # 指定 GCS 路徑
-        destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BG_TABLE}",  # 目標 BigQuery 表格
+        source_objects=[f"{GCS_PROCESS_PATH}/{dataset_file.replace('.gz', '.parquet').replace('.json', '')}"], # 指定 GCS 路徑        
+        destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE}",  # 目標 BigQuery 表格
         source_format="PARQUET",  # 根據資料格式選擇對應的格式
         write_disposition="WRITE_APPEND",  # 覆蓋現有的資料
         create_disposition="CREATE_IF_NEEDED",  # 如果表格不存在則創建

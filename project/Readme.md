@@ -1,33 +1,33 @@
-
-
 # GitHub Data Analytics Pipeline
 
 ## 1. Problem Description
 
-This project aims to analyze GitHub repository activity by processing data from the GitHub Archive dataset. The primary goal is to extract, load, and analyze watch events from GitHub repositories to identify trending repositories, user engagement patterns, and activity distributions over time.
+This project analyzes GitHub repository activity using the GitHub Archive dataset. The goal is to extract, process, and analyze watch events to uncover insights into repository trends, user engagement, and activity patterns over time.
 
 Key analytics include:
-- Identification of the most popular repositories
-- Analysis of user engagement patterns
-- Temporal trends in GitHub activities
+- Identifying the most popular repositories
+- Analyzing user engagement patterns
+- Understanding temporal trends in GitHub activities
 
-By processing GitHub Archive data, this pipeline enables data-driven insights into open-source project popularity and developer community behavior.
+This pipeline provides actionable insights into open-source project popularity and developer behavior.
 
 ## 2. Architecture
 
 ![Architecture Diagram](architecture-diagram.svg)
 
+The architecture follows a modular design, ensuring scalability and maintainability. It integrates cloud services, workflow orchestration, and data processing tools.
+
 ## 3. Cloud Infrastructure
 
-This project is deployed on Google Cloud Platform (GCP) using Infrastructure as Code (IaC) with Terraform.
+The project is deployed on Google Cloud Platform (GCP) using Infrastructure as Code (IaC) with Terraform.
 
 ### Cloud Components:
-- **Google Cloud Storage (GCS)**: Used as a data lake to store processed GitHub Archive data
-- **Google BigQuery**: Serves as the data warehouse for analytics queries
+- **Google Cloud Storage (GCS)**: Acts as a data lake for storing processed GitHub Archive data.
+- **Google BigQuery**: Serves as the data warehouse for analytics queries.
 
 ### Infrastructure as Code:
-- Terraform is used to provision and manage GCP resources
-- Key resources created through Terraform:
+- Terraform provisions and manages GCP resources.
+- Key resources include:
   - GCS bucket for data lake storage
   - BigQuery dataset for data warehousing
 
@@ -41,18 +41,18 @@ terraform apply
 
 ## 4. Data Ingestion - Batch Processing & Workflow Orchestration
 
-Apache Airflow is used to orchestrate the entire data pipeline with a DAG that performs the following steps:
+Apache Airflow orchestrates the data pipeline with a DAG that performs the following steps:
 
-1. Download hourly GitHub Archive data (JSON format)
-2. Process and transform the raw data into Parquet format
-3. Upload the processed data to Google Cloud Storage
-4. Create external tables in BigQuery for analytics
+1. Download hourly GitHub Archive data (JSON format).
+2. Transform raw data into Parquet format.
+3. Upload processed data to Google Cloud Storage.
+4. Create external tables in BigQuery for analytics.
 
 ### Key Airflow DAG components:
-- BashOperator for downloading data
-- PythonOperator for data transformation
-- GCS operators for cloud storage operations
-- BigQuery operators for data warehouse operations
+- **BashOperator**: Downloads data.
+- **PythonOperator**: Transforms data.
+- **GCS Operators**: Handles cloud storage operations.
+- **BigQuery Operators**: Manages data warehouse operations.
 
 To run the workflow:
 ```bash
@@ -62,35 +62,36 @@ make up
 
 ## 5. Data Warehouse
 
-BigQuery serves as the primary data warehouse for this project:
-
-- External tables created from GCS Parquet files
-- Optimized for analytical queries on GitHub data
+BigQuery is the primary data warehouse:
+- External tables are created from GCS Parquet files.
+- Optimized for analytical queries on GitHub data.
 
 ## 6. Transformations
 
 Data transformations are performed using:
 
-1. **Python/Pandas**: For initial ETL processing
-   - Filtering relevant GitHub events
-   - Converting to optimized Parquet format
+1. **Python/Pandas**: For initial ETL processing.
+   - Filters relevant GitHub events.
+   - Converts data to optimized Parquet format.
+
+2. **SQL**: For advanced transformations and analytics in BigQuery.
 
 ## 7. Dashboard
 
 The project includes an interactive dashboard for data visualization.
 
 Key dashboard components:
-- Repository popularity trends over time
-- Top trending repositories by watch events
-- User engagement metrics and patterns
+- Repository popularity trends over time.
+- Top trending repositories by watch events.
+- User engagement metrics and patterns.
 
 ## 8. Reproducibility
 
 ### Prerequisites:
-- Google Cloud Platform account with billing enabled
-- Docker and Docker Compose
-- Terraform
-- Python 3.9+
+- Google Cloud Platform account with billing enabled.
+- Docker and Docker Compose.
+- Terraform.
+- Python 3.9+.
 
 ### Setup and Deployment:
 
@@ -101,9 +102,9 @@ Key dashboard components:
    ```
 
 2. **Set up GCP credentials**:
-   - Create a service account with appropriate permissions
-   - Download the JSON key file
-   - Place it in the project directory as `service-account.json`
+   - Create a service account with appropriate permissions.
+   - Download the JSON key file.
+   - Place it in the project directory as `service-account.json`.
 
 3. **Deploy cloud infrastructure**:
    ```bash
@@ -122,17 +123,17 @@ Key dashboard components:
    - Airflow UI: http://localhost:8080
 
 6. **Trigger the pipeline**:
-   - From the Airflow UI, trigger the `cloud_gharchive_dag` DAG
+   - From the Airflow UI, trigger the `cloud_gharchive_dag` DAG.
 
-Follow these steps to fully reproduce the project and start analyzing GitHub data!
+Follow these steps to fully reproduce the project and start analyzing GitHub data.
 
 ## Technologies Used
 
-- **Infrastructure**: Terraform, Google Cloud Platform
-- **Workflow Orchestration**: Apache Airflow
-- **Storage**: Google Cloud Storage
-- **Data Warehouse**: Google BigQuery
-- **Data Processing**: Python, Pandas
-- **Containerization**: Docker, Docker Compose
-- **Database**: PostgreSQL
-- **Visualize data** (TBD): Metabase/Redash/Superset/Streamlit 
+- **Infrastructure**: Terraform, Google Cloud Platform.
+- **Workflow Orchestration**: Apache Airflow.
+- **Storage**: Google Cloud Storage.
+- **Data Warehouse**: Google BigQuery.
+- **Data Processing**: Python, Pandas.
+- **Containerization**: Docker, Docker Compose.
+- **Database**: PostgreSQL.
+- **Visualization**: Streamlit.

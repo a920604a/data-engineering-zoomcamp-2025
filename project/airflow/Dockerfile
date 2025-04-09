@@ -27,7 +27,5 @@ COPY requirements.txt .
 RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
-COPY scripts scripts
-RUN chmod +x scripts
 
 USER $AIRFLOW_UID
