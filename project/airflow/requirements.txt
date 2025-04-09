@@ -5,6 +5,7 @@ seaborn
 
 apache-airflow-providers-google
 apache-airflow[google]
+apache-airflow-providers-apache-spark
 pyarrow
 py4j
 pyspark

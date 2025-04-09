@@ -1,12 +1,13 @@
+version: "3.8"
+
 services:
-  db:
-    container_name: zoomcamp-project-postgres
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: 'postgres'
-      POSTGRES_PASSWORD: 'postgres'
-      POSTGRES_DB: 'gharchive'
+  streamlit:
+    build: ./Visual
+    container_name: streamlit-app
     ports:
-      - '5433:5432'
+      - "8501:8501" # 讓本地機能夠訪問 Streamlit 的預設端口
     volumes:
-      - ./vol-pgdata:/var/lib/postgresql/data
+      - ./Visual:/app
+      - ~/.gcp/dz-final-project.json:/app/credentials.json # 複製你的 Google 認證檔案
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
