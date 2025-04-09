@@ -4,12 +4,13 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.google.cloud.transfers.local_to_gcs import LocalFilesystemToGCSOperator
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
+from airflow.decorators import task
 
 from airflow.utils.trigger_rule import TriggerRule
 
 from datetime import datetime, timedelta
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, count
+from pyspark.sql.functions import col, count, to_date
 
 import os
 import itertools
@@ -41,9 +42,10 @@ default_args = {
 path_to_local_home = os.environ.get("AIRFLOW_HOME", "/opt/airflow")
 
 with DAG(
-    dag_id="cloud_gharchive_dag_v2",
+    dag_id="cloud_gharchive_dag",
     default_args=default_args,
-    schedule_interval=None,
+    # schedule_interval=None,
+    schedule_interval='@hourly',  # 每小時運行一次
     catchup=False,
 ) as dag:
 
@@ -142,7 +144,7 @@ with DAG(
         source_objects=[f"{GCS_PROCESS_PATH}/{dataset_file.replace('.gz', '.parquet').replace('.json', '')}"],  # 指定 GCS 路徑
         destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.github_archive",  # 目標 BigQuery 表格
         source_format="PARQUET",  # 根據資料格式選擇對應的格式
-        write_disposition="WRITE_TRUNCATE",  # 覆蓋現有的資料
+        write_disposition="WRITE_APPEND",  # 覆蓋現有的資料
         create_disposition="CREATE_IF_NEEDED",  # 如果表格不存在則創建
     )
 
