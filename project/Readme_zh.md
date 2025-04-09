@@ -1,8 +1,6 @@
-以下是專案的中文版 `README_zh.md` 文件內容：
-
----
-
 # GitHub 數據分析管線
+
+該專案透過分析 GitHub Watch 事件提供對開源開發趨勢的洞察。它使用 GCP、Airflow 和 BigQuery 構建，允許利益相關者即時探索開發人員參與度和儲存庫受歡迎程度。
 
 ## 1. 問題描述
 
@@ -57,18 +55,6 @@ terraform apply
 - **PythonOperator**：進行資料轉換。
 - **GCS Operators**：處理雲端儲存操作。
 - **BigQuery Operators**：管理資料倉儲作業。
-
-### 環境變數：
-Airflow 需一個 `env.json` 檔案存放敏感變數，請將此檔案放置於 `airflow` 資料夾中。
-
-範例 `env.json`：
-```json
-{
-  "GCP_PROJECT": "your-gcp-project-id",
-  "GCS_BUCKET": "your-gcs-bucket-name",
-  "BIGQUERY_DATASET": "your-bigquery-dataset-name"
-}
-```
 
 啟動工作流程指令：
 ```bash
@@ -150,7 +136,18 @@ docker-compose up
 5. **服務入口**：
    - Airflow UI: http://localhost:8080
 
-6. **觸發管線**：
+6. **環境變數：**
+Airflow 需一個 `env.json` 檔案存放敏感變數，請將此檔案放置於 `airflow` 資料夾中。
+
+   範例 `env.json`：
+   ```json
+   {
+   "GCP_PROJECT": "your-gcp-project-id",
+   "GCS_BUCKET": "your-gcs-bucket-name",
+   "BIGQUERY_DATASET": "your-bigquery-dataset-name"
+   }
+   ```
+7. **觸發管線**：
    - 於 Airflow UI 中觸發 `cloud_gharchive_dag` DAG。
 
 依照以上步驟即可完整重現本專案並開始 GitHub 數據分析。
@@ -161,11 +158,14 @@ docker-compose up
 - **工作流程調度**：Apache Airflow
 - **儲存**：Google Cloud Storage
 - **資料倉儲**：Google BigQuery
-- **資料處理**：Python, Pandas
+- **資料處理**：Python, Pandas, PySpark
 - **容器化**：Docker, Docker Compose
-- **資料庫**：PostgreSQL
 - **資料視覺化**：Streamlit
 
----
-
-如果你需要我幫你產出 `README_zh.md` 檔案，可以告訴我，我也可以直接幫你轉成檔案。
+## Project Structure
+```
+  ├── airflow/ # Airflow DAGs and configs 
+  ├── terraform/ # IaC scripts for GCP 
+  ├── Visual/ # Dashboard code 
+  └── README.md # Project overview
+```

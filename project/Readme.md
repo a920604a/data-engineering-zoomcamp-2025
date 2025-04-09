@@ -1,5 +1,7 @@
 # GitHub Data Analytics Pipeline
 
+This project provides insights into open-source development trends by analyzing GitHub Watch events. Built using GCP, Airflow, and BigQuery, it allows stakeholders to explore developer engagement and repository popularity in real-time.
+
 ## 1. Problem Description
 
 This project analyzes GitHub repository activity using the GitHub Archive dataset. The goal is to extract, process, and analyze watch events to uncover insights into repository trends, user engagement, and activity patterns over time.
@@ -54,17 +56,6 @@ Apache Airflow orchestrates the data pipeline with a DAG that performs the follo
 - **GCS Operators**: Handles cloud storage operations.
 - **BigQuery Operators**: Manages data warehouse operations.
 
-### Environment Variables:
-Airflow requires an `env.json` file to store sensitive variables. Place this file in the `airflow` directory.
-
-Example `env.json`:
-```json
-{
-  "GCP_PROJECT": "your-gcp-project-id",
-  "GCS_BUCKET": "your-gcs-bucket-name",
-  "BIGQUERY_DATASET": "your-bigquery-dataset-name"
-}
-```
 
 To run the workflow:
 ```bash
@@ -103,7 +94,7 @@ The dashboard is built using Streamlit and can be accessed locally at `http://lo
 
 To start the Streamlit server using Docker:
 ```bash
-cd Visual
+
 docker-compose up
 ```
 
@@ -145,8 +136,18 @@ Ensure the `docker-compose.yml` file is properly configured for Streamlit visual
 
 5. **Access services**:
    - Airflow UI: http://localhost:8080
+6. **Environment Variables:**
+Airflow requires an `env.json` file to store sensitive variables. Place this file in the `airflow` directory.
 
-6. **Trigger the pipeline**:
+   Example `env.json`:
+   ```json
+   {
+   "GCP_PROJECT": "your-gcp-project-id",
+   "GCS_BUCKET": "your-gcs-bucket-name",
+   "BIGQUERY_DATASET": "your-bigquery-dataset-name"
+   }
+   ```
+7. **Trigger the pipeline**:
    - From the Airflow UI, trigger the `cloud_gharchive_dag` DAG.
 
 Follow these steps to fully reproduce the project and start analyzing GitHub data.
@@ -157,7 +158,15 @@ Follow these steps to fully reproduce the project and start analyzing GitHub dat
 - **Workflow Orchestration**: Apache Airflow.
 - **Storage**: Google Cloud Storage.
 - **Data Warehouse**: Google BigQuery.
-- **Data Processing**: Python, Pandas.
+- **Data Processing**: Python, Pandas, PySpark.
 - **Containerization**: Docker, Docker Compose.
-- **Database**: PostgreSQL.
 - **Visualization**: Streamlit.
+
+
+## Project Structure
+```
+  ├── airflow/ # Airflow DAGs and configs 
+  ├── terraform/ # IaC scripts for GCP 
+  ├── Visual/ # Dashboard code 
+  └── README.md # Project overview
+```
