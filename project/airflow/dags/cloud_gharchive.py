@@ -7,6 +7,7 @@ from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQue
 from airflow.decorators import task
 
 from airflow.utils.trigger_rule import TriggerRule
+from airflow.models import Variable
 
 from datetime import datetime, timedelta
 from pyspark.sql import SparkSession
@@ -23,12 +24,13 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # GCS/BQ 設定
-GCS_BUCKET = "dz-data-lake"
-GCS_PATH = "gharchive"
-GCS_PROCESS_PATH = "processed_data"
-BQ_PROJECT = "dz-final-project"
-BQ_DATASET = "gharchive"
-BQ_DATASET_AREA = "US"
+GCS_BUCKET = Variable.get("GCS_BUCKET")
+GCS_PATH =  Variable.get("GCS_PATH") 
+GCS_PROCESS_PATH = Variable.get("GCS_PROCESS_PATH")
+BQ_PROJECT = Variable.get("BQ_PROJECT")
+BQ_DATASET = Variable.get("BQ_DATASET")
+BQ_DATASET_AREA = Variable.get("BQ_DATASET_AREA")
+BG_TABLE = Variable.get("BG_TABLE") 
 
 
 default_args = {
@@ -112,12 +114,11 @@ with DAG(
         df_filtered.write.parquet(output_dir, mode='overwrite')
         print(df_filtered.head(20))
 
-        parquet_files = [
+        return [
             os.path.join(output_dir, f)
             for f in os.listdir(output_dir)
-            if f.endswith(".snappy.parquet")
-        ]
-        return parquet_files
+            if f.endswith(".parquet")
+            ]
 
     spark_clean_task = PythonOperator(
         task_id='spark_clean',
@@ -150,8 +151,8 @@ with DAG(
     load_gcs_to_bq = GCSToBigQueryOperator(
         task_id='load_gcs_to_bq',
         bucket=GCS_BUCKET,
-        source_objects=[f"{GCS_PROCESS_PATH}/{dataset_file.replace('.gz', '.parquet').replace('.json', '')}"],  # 指定 GCS 路徑
-        destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.github_archive",  # 目標 BigQuery 表格
+        source_objects=[f"{GCS_PROCESS_PATH}/{dataset_file.replace('.gz', '.parquet').replace('.json', '')}/*.parquet"],  # 指定 GCS 路徑
+        destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BG_TABLE}",  # 目標 BigQuery 表格
         source_format="PARQUET",  # 根據資料格式選擇對應的格式
         write_disposition="WRITE_APPEND",  # 覆蓋現有的資料
         create_disposition="CREATE_IF_NEEDED",  # 如果表格不存在則創建
