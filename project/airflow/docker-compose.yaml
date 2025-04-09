@@ -105,19 +105,19 @@ services:
       start_period: 5s
     restart: always
 
-  postgres-dz:
-    image: postgres:13
-    container_name: postgres-dz
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - ./init-scripts:/docker-entrypoint-initdb.d
-      - ./postgres-dz-volume:/var/lib/postgresql/data
-    ports:
-      - 5423:5432
-    restart: always
+  # postgres-dz:
+  #   image: postgres:13
+  #   container_name: postgres-dz
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #   volumes:
+  #     - ./init-scripts:/docker-entrypoint-initdb.d
+  #     - ./postgres-dz-volume:/var/lib/postgresql/data
+  #   ports:
+  #     - 5423:5432
+  #   restart: always
 
   # redis:
   #   # Redis is limited to 7.2-bookworm due to licencing change

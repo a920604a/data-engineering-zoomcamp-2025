@@ -14,7 +14,7 @@ down:
 	docker-compose down --remove-orphans
 
 clean:
-	sudo rm -rf postgres-dz-volume/ postgres-db-volume/
+	sudo rm -rf postgres-db-volume/
 
 restart:
 	docker-compose restart
