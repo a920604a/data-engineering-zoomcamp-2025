@@ -54,11 +54,24 @@ Apache Airflow orchestrates the data pipeline with a DAG that performs the follo
 - **GCS Operators**: Handles cloud storage operations.
 - **BigQuery Operators**: Manages data warehouse operations.
 
+### Environment Variables:
+Airflow requires an `env.json` file to store sensitive variables. Place this file in the `airflow` directory.
+
+Example `env.json`:
+```json
+{
+  "GCP_PROJECT": "your-gcp-project-id",
+  "GCS_BUCKET": "your-gcs-bucket-name",
+  "BIGQUERY_DATASET": "your-bigquery-dataset-name"
+}
+```
+
 To run the workflow:
 ```bash
 cd airflow
 make up
 ```
+Ensure the `env.json` file is properly configured before starting Airflow.
 
 ## 5. Data Warehouse
 
@@ -84,6 +97,17 @@ Key dashboard components:
 - Repository popularity trends over time.
 - Top trending repositories by watch events.
 - User engagement metrics and patterns.
+
+### Streamlit Dashboard:
+The dashboard is built using Streamlit and can be accessed locally at `http://localhost:8501`.
+
+To start the Streamlit server using Docker:
+```bash
+cd Visual
+docker-compose up
+```
+
+Ensure the `docker-compose.yml` file is properly configured for Streamlit visualization.
 
 ## 8. Reproducibility
 
