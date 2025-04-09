@@ -29,7 +29,6 @@ GCS_PROCESS_PATH = "processed_data"
 BQ_PROJECT = "dz-final-project"
 BQ_DATASET = "gharchive"
 BQ_DATASET_AREA = "US"
-BQ_TABLE = "watch_events"
 
 
 default_args = {
@@ -49,13 +48,12 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    now = datetime.utcnow() - timedelta(hours=2)
+    now = datetime.utcnow() - timedelta(hours=2)    
     date_str = now.strftime('%Y-%m-%d')
     current_hour = now.hour
     dataset_file = f"{date_str}-{current_hour}.json.gz"
     dataset_url = f"https://data.gharchive.org/{dataset_file}"
-    local_gz_path = f"{path_to_local_home}/data/{dataset_file}"
-    local_json_path = local_gz_path.replace(".gz", "")
+    local_gz_path = f"{path_to_local_home}/data/{dataset_file}"    
     gcs_gz_path = f"{GCS_PATH}/{dataset_file}"
 
     os.makedirs(f"{path_to_local_home}/data", exist_ok=True)
@@ -64,7 +62,6 @@ with DAG(
         task_id="fetch_data",
         bash_command=f"wget {dataset_url} -O {local_gz_path} && gzip -d {local_gz_path}"
     )
-
     def ingest_and_save_data(dataset_name: str):
         path_to_json = f"{path_to_local_home}/data/{dataset_name}"
         path_to_parquet = f"{path_to_local_home}/data/{dataset_name}.parquet"
@@ -136,6 +133,17 @@ with DAG(
     ).expand(
         src=spark_clean_task.output
     )
+    
+    remove_parquet_task = BashOperator(
+        task_id = "remove_parquet",
+        bash_command = f"rm -rf {path_to_local_home}/data/{dataset_file.replace('.gz', '')}.parquet"
+    )
+    remove_processd_data_task = BashOperator(
+        task_id = "remove_processed_data",
+        bash_command = f"rm -rf {path_to_local_home}/data/{GCS_PROCESS_PATH}"
+        
+    )
+    
 
     
     # 從 GCS 加載資料到 BigQuery
@@ -152,5 +160,5 @@ with DAG(
  
     
     # 任務鏈
-    fetch_data_task >> ingest_and_save_task >> load_gcs_task
-    load_gcs_task >> spark_clean_task >> upload_cleaned_files >> load_gcs_to_bq 
+    fetch_data_task  >> ingest_and_save_task >> load_gcs_task
+    load_gcs_task >> spark_clean_task >> upload_cleaned_files >> remove_parquet_task>> load_gcs_to_bq  >> remove_processd_data_task
