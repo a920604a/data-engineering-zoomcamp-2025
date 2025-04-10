@@ -115,7 +115,11 @@ with DAG(
         os.makedirs(output_dir, exist_ok=True)
         df_filtered.write.parquet(output_dir, mode='overwrite')
         print(df_filtered.head(20))
-
+        print([
+            os.path.join(output_dir, f)
+            for f in os.listdir(output_dir)
+            if f.endswith(".parquet")
+            ])
         return [
             os.path.join(output_dir, f)
             for f in os.listdir(output_dir)
