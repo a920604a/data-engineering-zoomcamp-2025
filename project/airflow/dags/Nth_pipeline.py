@@ -1,9 +1,10 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
 from airflow.providers.google.cloud.transfers.local_to_gcs import LocalFilesystemToGCSOperator
 from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
 from airflow.decorators import task
-from google.cloud import storage
+from google.cloud import storage, bigquery
 from datetime import datetime, timedelta
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, count, unix_timestamp
@@ -121,19 +122,19 @@ with DAG(
                 # 轉換時間戳
                 df_cleaned = df_cleaned.withColumn("created_at", unix_timestamp(col("created_at")).cast("timestamp"))
 
-                # 過濾最近一個月的資料
-                df_filtered = df_cleaned.filter(col("created_at") >= one_month_ago)
+                # # 過濾最近一個月的資料
+                # df_filtered = df_cleaned.filter(col("created_at") >= one_month_ago)
 
-                # 計算每個 Repo 的事件數量
-                df_repo_activity = df_filtered.groupBy("repo_id", "repo_name") \
-                    .agg(count("event_id").alias("event_count")) \
-                    .orderBy(col("event_count").desc())
+                # # 計算每個 Repo 的事件數量
+                # df_repo_activity = df_filtered.groupBy("repo_id", "repo_name") \
+                #     .agg(count("event_id").alias("event_count")) \
+                #     .orderBy(col("event_count").desc())
 
                 # 儲存處理後的資料為 Parquet 檔案
                 output_file = os.path.join(output_dir, f"repo_activity_{input_file.split('/')[-1].replace('.json.parquet', '')}")
                 output_files.append(output_file)
-                df_repo_activity.write.parquet(output_file, mode="overwrite")
-                print(f" 輸出範本 {df_repo_activity.show(5)}")
+                df_cleaned.write.parquet(output_file, mode="overwrite")
+                print(f" 輸出範本 {df_cleaned.show(5)}")
                 logger.info(f"檔案處理完成並儲存至: {output_dir}")
             except Exception as e:
                 logger.error(f"處理檔案失敗: {input_file}, 錯誤: {e}")
@@ -157,29 +158,41 @@ with DAG(
     def upload_to_gcs_and_bigquery(ti, **kwargs):
         # 從 XCom 取得下載和處理後的檔案清單
         downloaded_files = ti.xcom_pull(task_ids='download_gcs_parquet', key='downloaded_files')
-        processed_files = ti.xcom_pull(task_ids='spark_cleaning_and_transformation', key='return_value')
-
+        processed_folders = ti.xcom_pull(task_ids='spark_cleaning_and_transformation', key='return_value')
+        print(f"processed_folders {processed_folders}")
         # 對每個檔案進行上傳處理
-        for file in processed_files:
-            gcs_folder = f"{GCS_PROCESS_PATH}/repo_activity/{os.path.basename(file)}"
-            print(f"src {file}")
+        for src_folder in processed_folders:
+            gcs_folder = f"{GCS_PROCESS_PATH}/repo_activity/{os.path.basename(src_folder)}"
+            print(f"src_folder {src_folder}")
             print(f"gcs_folder {gcs_folder}")
-            for gcs_file in file:
+            for src_file in os.listdir(src_folder):
+                if not src_file.endswith('.parquet'):
+                    continue
+                src_file = os.path.join(src_folder, src_file)
+                print(f"src_file {src_file}")
+                print(f"gcs_folder {gcs_folder}")
+                # 檢查檔案是否存在
+                if not os.path.exists(src_file):
+                    logger.error(f"檔案不存在: {src_file}")
+                    continue
+                else:
+                    logger.info(f"檔案存在: {src_file}")
+                print(f"src_file {src_file} and basename {os.path.basename(src_file)}")
                 
                 # 上傳檔案到 GCS
                 upload_to_gcs = LocalFilesystemToGCSOperator(
-                    task_id=f"upload_to_gcs_{os.path.basename(file)}_{gcs_file}",
-                    src=file,
-                    dst=gcs_file,
+                    task_id=f"upload_to_gcs_{os.path.basename(src_file).replace('.', '_')}",
+                    src=src_file,
+                    dst=gcs_folder,
                     bucket=GCS_BUCKET,
                     dag=kwargs['dag']  # 確保任務關聯到正確的 DAG
                 )
 
                 # 上傳檔案從 GCS 到 BigQuery
                 upload_to_bq = GCSToBigQueryOperator(
-                    task_id=f"upload_to_bq_{os.path.basename(file)}_{gcs_file}",
+                    task_id=f"upload_to_bq_{os.path.basename(src_file).replace('.', '_')}",
                     bucket=GCS_BUCKET,
-                    source_objects=[gcs_file],
+                    source_objects=[gcs_folder],
                     destination_project_dataset_table=f"{BQ_PROJECT}:{BQ_DATASET}.{BQ_TABLE_MOST_ACTIVE}",
                     schema_fields=[
                         {'name': 'event_id', 'type': 'STRING'},
@@ -197,6 +210,45 @@ with DAG(
 
                 # 確保 GCS 上傳完成後再進行 BigQuery 上傳
                 upload_to_gcs >> upload_to_bq
+    
+    # def upload_to_gcs_and_bigquery(ti, **kwargs):
+    #     downloaded_files = ti.xcom_pull(task_ids='download_gcs_parquet', key='downloaded_files')
+    #     processed_folders = ti.xcom_pull(task_ids='spark_cleaning_and_transformation', key='return_value')
+
+    #     client_gcs = storage.Client()
+    #     bucket = client_gcs.bucket(GCS_BUCKET)
+
+    #     client_bq = bigquery.Client()
+
+    #     for src_folder in processed_folders:
+    #         gcs_folder = f"{GCS_PROCESS_PATH}/repo_activity/{os.path.basename(src_folder)}"
+
+    #         for file_name in os.listdir(src_folder):
+    #             if not file_name.endswith(".parquet"):
+    #                 continue
+
+    #             local_path = os.path.join(src_folder, file_name)
+    #             blob_path = f"{gcs_folder}/{file_name}"
+
+    #             if not os.path.exists(local_path):
+    #                 logger.error(f"檔案不存在: {local_path}")
+    #                 continue
+    #             logger.info(f"開始上傳: {local_path} → gs://{GCS_BUCKET}/{blob_path}")
+
+    #             blob = bucket.blob(blob_path)
+    #             blob.upload_from_filename(local_path)
+    #             logger.info(f"已上傳到 GCS")
+
+    #             table_id = f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE_MOST_ACTIVE}"
+    #             job_config = bigquery.LoadJobConfig(
+    #                 source_format=bigquery.SourceFormat.PARQUET,
+    #                 write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+    #                 autodetect=True,
+    #             )
+    #             uri = f"gs://{GCS_BUCKET}/{blob_path}"
+    #             load_job = client_bq.load_table_from_uri(uri, table_id, job_config=job_config)
+    #             load_job.result()  # 等待完成
+    #             logger.info(f"已上傳到 BigQuery → {table_id}")
         
         
     upload_to_gcs_and_bigquery_task = PythonOperator(
@@ -205,7 +257,11 @@ with DAG(
         provide_context=True,  # 確保提供上下文
     )
         
-        # 任務順序
-    download_gcs_parquet_task >> spark_processing_task  >> upload_to_gcs_and_bigquery_task
+    remove_all_data_task =  BashOperator(
+        task_id = "remove_all_data",
+        bash_command = f"rm -rf {path_to_local_home}/activate_data"
+    )
+    # 任務順序
+    download_gcs_parquet_task >> spark_processing_task  >> upload_to_gcs_and_bigquery_task >> remove_all_data_task
 
     # >> load_to_bigquery_task
