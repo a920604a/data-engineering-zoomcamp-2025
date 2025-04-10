@@ -153,64 +153,6 @@ with DAG(
         provide_context=True,  # 確保提供上下文
     )
     
-    # 使用 for loop 分別上傳至 GCS 和 BigQuery
-    # 假設 `dag` 是任務所屬的 DAG 物件
-    # def upload_to_gcs_and_bigquery(ti, **kwargs):
-    #     # 從 XCom 取得下載和處理後的檔案清單
-    #     downloaded_files = ti.xcom_pull(task_ids='download_gcs_parquet', key='downloaded_files')
-    #     processed_folders = ti.xcom_pull(task_ids='spark_cleaning_and_transformation', key='return_value')
-    #     print(f"processed_folders {processed_folders}")
-    #     # 對每個檔案進行上傳處理
-    #     for src_folder in processed_folders:
-    #         gcs_folder = f"{GCS_PROCESS_PATH}/repo_activity/{os.path.basename(src_folder)}"
-    #         print(f"src_folder {src_folder}")
-    #         print(f"gcs_folder {gcs_folder}")
-    #         for src_file in os.listdir(src_folder):
-    #             if not src_file.endswith('.parquet'):
-    #                 continue
-    #             src_file = os.path.join(src_folder, src_file)
-    #             print(f"src_file {src_file}")
-    #             print(f"gcs_folder {gcs_folder}")
-    #             # 檢查檔案是否存在
-    #             if not os.path.exists(src_file):
-    #                 logger.error(f"檔案不存在: {src_file}")
-    #                 continue
-    #             else:
-    #                 logger.info(f"檔案存在: {src_file}")
-    #             print(f"src_file {src_file} and basename {os.path.basename(src_file)}")
-                
-    #             # 上傳檔案到 GCS
-    #             upload_to_gcs = LocalFilesystemToGCSOperator(
-    #                 task_id=f"upload_to_gcs_{os.path.basename(src_file).replace('.', '_')}",
-    #                 src=src_file,
-    #                 dst=gcs_folder,
-    #                 bucket=GCS_BUCKET,
-    #                 dag=kwargs['dag']  # 確保任務關聯到正確的 DAG
-    #             )
-
-    #             # 上傳檔案從 GCS 到 BigQuery
-    #             upload_to_bq = GCSToBigQueryOperator(
-    #                 task_id=f"upload_to_bq_{os.path.basename(src_file).replace('.', '_')}",
-    #                 bucket=GCS_BUCKET,
-    #                 source_objects=[gcs_folder],
-    #                 destination_project_dataset_table=f"{BQ_PROJECT}:{BQ_DATASET}.{BQ_TABLE_MOST_ACTIVE}",
-    #                 schema_fields=[
-    #                     {'name': 'event_id', 'type': 'STRING'},
-    #                     {'name': 'event_type', 'type': 'STRING'},
-    #                     {'name': 'actor_id', 'type': 'STRING'},
-    #                     {'name': 'actor_login', 'type': 'STRING'},
-    #                     {'name': 'repo_id', 'type': 'STRING'},
-    #                     {'name': 'repo_name', 'type': 'STRING'},
-    #                     {'name': 'created_at', 'type': 'TIMESTAMP'}
-    #                 ],
-    #                 source_format="PARQUET",
-    #                 write_disposition='WRITE_APPEND',
-    #                 dag=kwargs['dag']  # 確保任務關聯到正確的 DAG
-    #             )
-
-    #             # 確保 GCS 上傳完成後再進行 BigQuery 上傳
-    #             upload_to_gcs >> upload_to_bq
-    
     def upload_to_gcs_and_bigquery(ti, **kwargs):
         downloaded_files = ti.xcom_pull(task_ids='download_gcs_parquet', key='downloaded_files')
         processed_folders = ti.xcom_pull(task_ids='spark_cleaning_and_transformation', key='return_value')
@@ -264,4 +206,3 @@ with DAG(
     # 任務順序
     download_gcs_parquet_task >> spark_processing_task  >> upload_to_gcs_and_bigquery_task >> remove_all_data_task
 
-    # >> load_to_bigquery_task
