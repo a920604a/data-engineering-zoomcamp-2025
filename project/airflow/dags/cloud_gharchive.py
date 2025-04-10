@@ -4,6 +4,8 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.google.cloud.transfers.local_to_gcs import LocalFilesystemToGCSOperator
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
+from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateEmptyTableOperator
+
 from airflow.decorators import task
 
 from airflow.utils.trigger_rule import TriggerRule
@@ -145,21 +147,54 @@ with DAG(
         
     )
     
+    # 臨時 staging table 名稱
+    BQ_STAGING_TABLE = f"{BQ_TABLE}_staging"
 
-    
-    # 從 GCS 加載資料到 BigQuery
-    load_gcs_to_bq = GCSToBigQueryOperator(
-        task_id='load_gcs_to_bq',
+    # 先將資料載入 staging table
+    load_to_staging = GCSToBigQueryOperator(
+        task_id='load_to_staging',
         bucket=GCS_BUCKET,
-        source_objects=[f"{GCS_PROCESS_PATH}/{dataset_file.replace('.gz', '.parquet').replace('.json', '')}"], # 指定 GCS 路徑        
-        destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE}",  # 目標 BigQuery 表格
-        source_format="PARQUET",  # 根據資料格式選擇對應的格式
-        write_disposition="WRITE_APPEND",  # 覆蓋現有的資料
-        create_disposition="CREATE_IF_NEEDED",  # 如果表格不存在則創建
+        source_objects=[f"{GCS_PROCESS_PATH}/{dataset_file.replace('.gz', '.parquet').replace('.json', '')}"],
+        destination_project_dataset_table=f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_STAGING_TABLE}",
+        source_format="PARQUET",
+        write_disposition="WRITE_TRUNCATE",
+        create_disposition="CREATE_IF_NEEDED",
+    )
+    
+    check_or_create_table = BigQueryCreateEmptyTableOperator(
+        task_id="check_or_create_main_table",
+        dataset_id=BQ_DATASET,
+        table_id=BQ_TABLE,
+        project_id=BQ_PROJECT,
+        schema_fields=[
+            {"name": "name", "type": "STRING", "mode": "REQUIRED"},
+            {"name": "push_count", "type": "INTEGER", "mode": "REQUIRED"},
+        ],
+        exists_ok=True,  # 重點在這個參數，表格存在也不會報錯
+    )
+    
+    
+    # 然後使用 MERGE 語法去更新正式表格
+    merge_to_main = BigQueryInsertJobOperator(
+        task_id="merge_to_main",
+        configuration={
+            "query": {
+                "query": f"""
+                    MERGE `{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE}` T
+                    USING `{BQ_PROJECT}.{BQ_DATASET}.{BQ_STAGING_TABLE}` S
+                    ON T.name = S.name
+                    WHEN MATCHED THEN
+                    UPDATE SET push_count = S.push_count
+                    WHEN NOT MATCHED THEN
+                    INSERT (name, push_count) VALUES (S.name, S.push_count)
+                """,
+                "useLegacySql": False,
+            }
+        },
     )
 
  
     
     # 任務鏈
     fetch_data_task  >> ingest_and_save_task >> load_gcs_task
-    load_gcs_task >> spark_clean_task >> upload_cleaned_files >> remove_parquet_task>> load_gcs_to_bq  >> remove_processd_data_task
+    load_gcs_task >> spark_clean_task >> upload_cleaned_files >> remove_parquet_task>> load_to_staging >> check_or_create_table  >> merge_to_main  >> remove_processd_data_task
