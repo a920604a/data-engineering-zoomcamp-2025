@@ -106,10 +106,10 @@ with DAG(
         spark = SparkSession.builder.master("local[*]").appName('spark-clean').getOrCreate()
         df = spark.read.option("header", "true").parquet(local)
 
-        df_filtered = df.filter(col("type") == "PushEvent") \
+        df_filtered = df.filter(col("type") == "WatchEvent") \
             .groupBy("repo.name") \
-            .agg(count("*").alias("push_count")) \
-            .orderBy(col("push_count").desc())
+            .agg(count("*").alias("watch_count")) \
+            .orderBy(col("watch_count").desc())
 
         output_dir = os.path.join(os.path.dirname(local), f"{GCS_PROCESS_PATH}/")
         os.makedirs(output_dir, exist_ok=True)
@@ -168,7 +168,7 @@ with DAG(
         project_id=BQ_PROJECT,
         schema_fields=[
             {"name": "name", "type": "STRING", "mode": "REQUIRED"},
-            {"name": "push_count", "type": "INTEGER", "mode": "REQUIRED"},
+            {"name": "watch_count", "type": "INTEGER", "mode": "REQUIRED"},
         ],
         exists_ok=True,  # 重點在這個參數，表格存在也不會報錯
     )
@@ -184,9 +184,9 @@ with DAG(
                     USING `{BQ_PROJECT}.{BQ_DATASET}.{BQ_STAGING_TABLE}` S
                     ON T.name = S.name
                     WHEN MATCHED THEN
-                    UPDATE SET push_count = S.push_count
+                    UPDATE SET watch_count = S.watch_count
                     WHEN NOT MATCHED THEN
-                    INSERT (name, push_count) VALUES (S.name, S.push_count)
+                    INSERT (name, watch_count) VALUES (S.name, S.watch_count)
                 """,
                 "useLegacySql": False,
             }
