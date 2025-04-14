@@ -17,4 +17,4 @@ COPY . /app
 ENV STREAMLIT_SERVER_PORT=8501
 
 # 啟動 Streamlit 應用
-CMD ["streamlit", "run", "app.py"]
+CMD ["streamlit", "run", "Home.py"]
