@@ -90,7 +90,8 @@ Key dashboard components:
 - User engagement metrics and patterns.
 
 ### Streamlit Dashboard:
-The dashboard is built using Streamlit and can be accessed locally at `http://localhost:8501`.
+The dashboard is built using Streamlit and can be accessed locally at `http://localhost:8501`. or [demo 1](https://github.com/a920604a/data-engineering-zoomcamp-2025/blob/main/project/GitHub%20WatchEvent%20%E7%86%B1%E9%96%80%20Repo.pdf), [demo 2](./ActivityDashboard.pdf)
+
 
 To start the Streamlit server using Docker:
 ```bash
