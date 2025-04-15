@@ -89,7 +89,8 @@ BigQuery 是主要的資料倉儲工具：
 - 使用者參與度與活躍模式。
 
 ### Streamlit 儀表板：
-本儀表板採用 Streamlit 架設，可於本地端瀏覽 `http://localhost:8501`。
+本儀表板採用 Streamlit 架設，可於本地端瀏覽 `http://localhost:8501`。或成果[展示1](https://github.com/a920604a/data-engineering-zoomcamp-2025/blob/main/project/GitHub%20WatchEvent%20%E7%86%B1%E9%96%80%20Repo.pdf), [展示2](./ActivityDashboard.pdf)
+
 
 使用 Docker 啟動 Streamlit：
 ```bash
