@@ -23,7 +23,7 @@ def get_watch_events():
         SELECT name AS repo_name, watch_count
         FROM `{TABLE_REF}`
         ORDER BY watch_count DESC
-        LIMIT 100
+        LIMIT 1000
     """
     df = client.query(query).to_dataframe()
     df["url"] = df["repo_name"].apply(lambda name: f"http://github.com/{name}")
@@ -47,7 +47,7 @@ def plot_altair_chart(df):
     ).properties(
         width='container',
         height=600,
-        title="Watch 次數前 100 名 Repository"
+        title="Watch 次數前 1000 名 Repository"
     )
     st.altair_chart(chart, use_container_width=True)
 
